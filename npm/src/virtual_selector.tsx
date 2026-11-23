@@ -188,10 +188,6 @@ const VirtualSelector = ({
       setIsLoding(false);
 
       setVisibleRange(prev => {
-        const newEnd = Math.min(prev.end, result.totalCount - 1);
-        if (newEnd !== prev.end) {
-          return { ...prev, end: newEnd };
-        }
         return prev;
       });
     } catch (error) {
@@ -238,6 +234,15 @@ const VirtualSelector = ({
     };
   }, []);
 
+  const resetDropdownState = useCallback(() => {
+    if (searchTimerId) {
+      clearTimeout(searchTimerId);
+    }
+    setSearchKeyValue(null);
+    setData(new Map());
+    cursorMapRef.current.clear();
+  }, []);
+
   const activeOption = async (isActive: boolean) => {
     setIsOpen(isActive);
 
@@ -248,6 +253,9 @@ const VirtualSelector = ({
 
       setVisibleRange({ start, end });
     }
+    else {
+      resetDropdownState();
+    }
   }
 
   const handleOptionClick = (id: string, name: string) => {
@@ -255,6 +263,7 @@ const VirtualSelector = ({
     callBack({ id: id, name: name });
     setSearchKeyValue('');
     setIsOpen(false);
+    resetDropdownState();
   };
 
   const searchOption = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,6 +283,7 @@ const VirtualSelector = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        resetDropdownState();
       }
     };
 
