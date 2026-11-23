@@ -186,6 +186,10 @@ const VirtualSelector = ({
       setIsLoding(false);
 
       setVisibleRange(prev => {
+        const newEnd = Math.min(prev.end, result.totalCount - 1);
+        if (newEnd !== prev.end) {
+          return { ...prev, end: newEnd };
+        }
         return prev;
       });
     } catch (error) {
