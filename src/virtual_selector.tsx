@@ -79,6 +79,8 @@ const VirtualSelector = ({
   const [searchTimerId, setSearchTimerId] = useState<number>(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const cursorMapRef = useRef<Map<number, CursorInfo>>(new Map());
+  const isInitialLoadRef = useRef(false);
+  const skipNextFetchRef = useRef(false);
 
   // Update selectedOption when selectedData changes
   useEffect(() => {
@@ -185,10 +187,17 @@ const VirtualSelector = ({
 
       setIsLoding(false);
 
+      const maxValidIndex = result.totalCount <= 0 ? -1 : result.totalCount - 1;
+      const adjustedEnd = Math.min(end, maxValidIndex);
+
+      if (isInitialLoadRef.current && adjustedEnd < end) {
+        skipNextFetchRef.current = true;
+      }
+      isInitialLoadRef.current = false;
+
       setVisibleRange(prev => {
-        const newEnd = Math.min(prev.end, result.totalCount - 1);
-        if (newEnd !== prev.end) {
-          return { ...prev, end: newEnd };
+        if (adjustedEnd !== prev.end) {
+          return { ...prev, end: adjustedEnd };
         }
         return prev;
       });
@@ -221,11 +230,17 @@ const VirtualSelector = ({
   // Fetch data when visible range changes
   useEffect(() => {
     if (!isOpen) return;
+
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
+
     const { start, end } = visibleRange;
     if (start >= 0 && end >= start) {
       fetchDataForRange(start, end);
     }
-  }, [visibleRange, fetchDataForRange]);
+  }, [visibleRange, fetchDataForRange, isOpen]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -250,15 +265,16 @@ const VirtualSelector = ({
 
     if (isActive) {
       setIsLoding(true);
+      isInitialLoadRef.current = true;
       const start = 0;
       const end = Math.ceil(height / rowHeight) + buffer;
 
       setVisibleRange({ start, end });
-    }
-    else {
+    } else {
+      isInitialLoadRef.current = false;
       resetDropdownState();
     }
-  }
+  };
 
   const handleOptionClick = (id: string, name: string) => {
     setSelectedOption(name);
@@ -273,13 +289,14 @@ const VirtualSelector = ({
 
     const timeoutId = window.setTimeout(() => {
       setSearchKeyValue(event.target.value);
+      isInitialLoadRef.current = true;
       const start = 0;
       const end = Math.ceil(height / rowHeight) + buffer;
       setData(new Map());
       setVisibleRange({ start, end });
-    }, 300)
+    }, 300);
     setSearchTimerId(timeoutId);
-  }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -387,4 +404,3 @@ const VirtualSelector = ({
 VirtualSelector.displayName = "VirtualSelector";
 
 export { VirtualSelector };
-
